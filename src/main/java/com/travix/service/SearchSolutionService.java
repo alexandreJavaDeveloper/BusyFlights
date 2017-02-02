@@ -7,9 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -38,6 +35,9 @@ public class SearchSolutionService
 
     private final RestTemplate restTemplate;
 
+    // Thread-safe, so can be and must be instantiated once (performance)
+    private final ObjectMapper mapper;
+
     private final TypeReference<List<CrazyAirFlightResponse>> typeReferenceCrazyAir;
 
     private final TypeReference<List<ToughJetFlightResponse>> typeReferenceToughJet;
@@ -45,6 +45,7 @@ public class SearchSolutionService
     public SearchSolutionService()
     {
         this.restTemplate = new RestTemplate();
+        this.mapper = new ObjectMapper();
         this.typeReferenceCrazyAir = new TypeReference<List<CrazyAirFlightResponse>>()
         {
         };
@@ -58,27 +59,17 @@ public class SearchSolutionService
     public List<FlightResponse> searchSolution(@RequestBody
     final FlightRequest request) throws JsonGenerationException, JsonMappingException, IOException
     {
-        final List<FlightResponse> flights = new ArrayList<>();
+        this.mapper.writeValue(new File("file.json"), request);
 
-        final ObjectMapper mapper = new ObjectMapper();
-        mapper.writeValue(new File("file.json"), request);
+        // the consumes and produces is by default JSON, that's why I can send FlightRequest in the body
+        final List<Map<String, String>> responseJsonCrazyAir = this.restTemplate.postForObject(this.URL_CRAZY_AIR, request, List.class);
+        final List<Map<String, String>> responseJsonToughJet = this.restTemplate.postForObject(this.URL_TOUGH_JET, request, List.class);
 
-        final String requestJson = mapper.writeValueAsString(request);
+        final String listCrazyAirAsJson = this.mapper.writeValueAsString(responseJsonCrazyAir);
+        final String listCrazyToughJetJson = this.mapper.writeValueAsString(responseJsonToughJet);
 
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        final HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
-
-        final List<Map<String, String>> responseJsonCrazyAir = this.restTemplate.postForObject(this.URL_CRAZY_AIR, entity, List.class);
-        final List<Map<String, String>> responseJsonToughJet = this.restTemplate.postForObject(this.URL_TOUGH_JET, entity, List.class);
-
-        final String listCrazyAirAsJson = mapper.writeValueAsString(responseJsonCrazyAir);
-        final String listCrazyToughJetJson = mapper.writeValueAsString(responseJsonToughJet);
-
-        final List<CrazyAirFlightResponse> crazyAirFlightResponseList = mapper.readValue(listCrazyAirAsJson, this.typeReferenceCrazyAir);
-
-        final List<ToughJetFlightResponse> toughJetFlightResponse = mapper.readValue(listCrazyToughJetJson, this.typeReferenceToughJet);
+        final List<CrazyAirFlightResponse> crazyAirFlightResponseList = this.mapper.readValue(listCrazyAirAsJson, this.typeReferenceCrazyAir);
+        final List<ToughJetFlightResponse> toughJetFlightResponse = this.mapper.readValue(listCrazyToughJetJson, this.typeReferenceToughJet);
 
         final List<FlightResponse> flightsCrazyAir = this.convertCrazyAirSupplier(crazyAirFlightResponseList);
         Collections.sort(flightsCrazyAir);
@@ -86,6 +77,7 @@ public class SearchSolutionService
         final List<FlightResponse> flightsToughJet = this.convertToughJetSupplier(toughJetFlightResponse);
         Collections.sort(flightsToughJet);
 
+        final List<FlightResponse> flights = new ArrayList<>();
         flights.addAll(flightsCrazyAir);
         flights.addAll(flightsToughJet);
 

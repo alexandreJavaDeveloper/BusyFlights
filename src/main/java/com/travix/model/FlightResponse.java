@@ -1,6 +1,5 @@
 package com.travix.model;
 
-
 public class FlightResponse implements Comparable<FlightResponse>
 {
     private String airline;
