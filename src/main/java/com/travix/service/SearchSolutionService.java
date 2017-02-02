@@ -21,6 +21,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travix.formatter.ValueFormatter;
+import com.travix.formatter.ValueFormatterCrazyAir;
+import com.travix.formatter.ValueFormatterToughJet;
 import com.travix.model.CrazyAirFlightResponse;
 import com.travix.model.FlightRequest;
 import com.travix.model.FlightResponse;
@@ -30,91 +32,105 @@ import com.travix.model.ToughJetFlightResponse;
 @RestController
 public class SearchSolutionService
 {
-	private final String URL_CRAZY_AIR = "http://localhost:8090/crazyair";
+    private final String URL_CRAZY_AIR = "http://localhost:8090/crazyair";
 
-	private final String URL_TOUGH_JET = "http://localhost:8090/toughjet";
+    private final String URL_TOUGH_JET = "http://localhost:8090/toughjet";
 
-	private final RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
-	public SearchSolutionService()
-	{
-		this.restTemplate = new RestTemplate();
-	}
+    private final TypeReference<List<CrazyAirFlightResponse>> typeReferenceCrazyAir;
 
-	@SuppressWarnings("unchecked")
-	@RequestMapping(value = "/searchsolution", method = RequestMethod.POST)
-	public List<FlightResponse> searchSolution(@RequestBody final FlightRequest request) throws JsonGenerationException, JsonMappingException, IOException
-	{
-		final List<FlightResponse> flights = new ArrayList<>();
+    private final TypeReference<List<ToughJetFlightResponse>> typeReferenceToughJet;
 
-		final ObjectMapper mapper = new ObjectMapper();
-		mapper.writeValue(new File("file.json"), request);
+    public SearchSolutionService()
+    {
+        this.restTemplate = new RestTemplate();
+        this.typeReferenceCrazyAir = new TypeReference<List<CrazyAirFlightResponse>>()
+            {
+            };
+        this.typeReferenceToughJet = new TypeReference<List<ToughJetFlightResponse>>()
+                {
+                };
+    }
 
-		final String requestJson = mapper.writeValueAsString(request);
+    @SuppressWarnings("unchecked")
+    @RequestMapping(value = "/searchsolution", method = RequestMethod.POST)
+    public List<FlightResponse> searchSolution(@RequestBody
+    final FlightRequest request) throws JsonGenerationException, JsonMappingException, IOException
+    {
+        final List<FlightResponse> flights = new ArrayList<>();
 
-		final HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
+        final ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(new File("file.json"), request);
 
-		final HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
+        final String requestJson = mapper.writeValueAsString(request);
 
-		final List<Map<String, String>> responseJsonCrazyAir = this.restTemplate.postForObject(this.URL_CRAZY_AIR, entity, List.class);
-		final List<Map<String, String>> responseJsonToughJet = this.restTemplate.postForObject(this.URL_TOUGH_JET, entity, List.class);
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-		final String listCrazyAirAsJson = mapper.writeValueAsString(responseJsonCrazyAir);
-		final String listCrazyToughJetJson = mapper.writeValueAsString(responseJsonToughJet);
+        final HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
 
-		final List<CrazyAirFlightResponse> crazyAirFlightResponseList = mapper.readValue(listCrazyAirAsJson, new TypeReference<List<CrazyAirFlightResponse>>(){});
-		final List<ToughJetFlightResponse> toughJetFlightResponse = mapper.readValue(listCrazyToughJetJson, new TypeReference<List<ToughJetFlightResponse>>(){});
+        final List<Map<String, String>> responseJsonCrazyAir = this.restTemplate.postForObject(this.URL_CRAZY_AIR, entity, List.class);
+        final List<Map<String, String>> responseJsonToughJet = this.restTemplate.postForObject(this.URL_TOUGH_JET, entity, List.class);
 
-		final List<FlightResponse> flightsCrazyAir = this.convertCrazyAirSupplier(crazyAirFlightResponseList);
-		Collections.sort(flightsCrazyAir);
+        final String listCrazyAirAsJson = mapper.writeValueAsString(responseJsonCrazyAir);
+        final String listCrazyToughJetJson = mapper.writeValueAsString(responseJsonToughJet);
 
-		final List<FlightResponse> flightsToughJet = this.convertToughJetSupplier(toughJetFlightResponse);
-		Collections.sort(flightsToughJet);
+        final List<CrazyAirFlightResponse> crazyAirFlightResponseList = mapper.readValue(listCrazyAirAsJson, this.typeReferenceCrazyAir);
 
-		flights.addAll(flightsCrazyAir);
-		flights.addAll(flightsToughJet);
+        final List<ToughJetFlightResponse> toughJetFlightResponse = mapper.readValue(listCrazyToughJetJson, this.typeReferenceToughJet);
 
-		return flights;
-	}
+        final List<FlightResponse> flightsCrazyAir = this.convertCrazyAirSupplier(crazyAirFlightResponseList);
+        Collections.sort(flightsCrazyAir);
 
-	private List<FlightResponse> convertToughJetSupplier(final List<ToughJetFlightResponse> toughJetFlightResponse)
-	{
-		final List<FlightResponse> flights = new ArrayList<>();
+        final List<FlightResponse> flightsToughJet = this.convertToughJetSupplier(toughJetFlightResponse);
+        Collections.sort(flightsToughJet);
 
-		for (final ToughJetFlightResponse object : toughJetFlightResponse)
-		{
-			final FlightResponse flightResponse = new FlightResponse();
-			flightResponse.setAirline(object.getCarrier());
-			flightResponse.setSupplier(Supplier.TOUGH_JET.getName());
-			flightResponse.setFare(ValueFormatter.round(object.getBasePrice() + object.getTax()));
-			flightResponse.setDepartureAirportCode(object.getDepartureAirportName());
-			flightResponse.setDestinationAirportCode(object.getArrivalAirportName());
-			//			flightResponse.setDepartureDate(object.); // aqui pega um por um
-			//			flightResponse.setArrivalDate();
+        flights.addAll(flightsCrazyAir);
+        flights.addAll(flightsToughJet);
 
-			flights.add(flightResponse);
-		}
+        return flights;
+    }
 
-		return flights;
-	}
+    private List<FlightResponse> convertToughJetSupplier(final List<ToughJetFlightResponse> toughJetFlightResponse)
+    {
+        final List<FlightResponse> flights = new ArrayList<>();
 
-	private List<FlightResponse> convertCrazyAirSupplier(final List<CrazyAirFlightResponse> crazyAirFlightResponseList) {
-		final List<FlightResponse> flights = new ArrayList<>();
+        for (final ToughJetFlightResponse object : toughJetFlightResponse)
+        {
+            final FlightResponse flightResponse = new FlightResponse();
+            flightResponse.setAirline(object.getCarrier());
+            flightResponse.setSupplier(Supplier.TOUGH_JET.getName());
+            flightResponse.setFare(ValueFormatter.round(object.getBasePrice() + object.getTax()));
+            flightResponse.setDepartureAirportCode(object.getDepartureAirportName());
+            flightResponse.setDestinationAirportCode(object.getArrivalAirportName());
+            flightResponse.setDepartureDate(ValueFormatterToughJet.getDateTimeISO8801(object.getDepartureDay(), object.getDepartureMonth(),
+                object.getDepartureYear()));
+            flightResponse.setArrivalDate(ValueFormatterToughJet.getDateTimeISO8801(object.getReturnDay(), object.getReturnMonth(), object.getReturnYear()));
 
-		for (final CrazyAirFlightResponse object : crazyAirFlightResponseList)
-		{
-			final FlightResponse flightResponse = new FlightResponse();
-			flightResponse.setAirline(object.getAirline());
-			flightResponse.setSupplier(Supplier.CRAZY_AIR.getName());
-			flightResponse.setFare(ValueFormatter.round(object.getPrice()));
-			flightResponse.setDepartureAirportCode(object.getDepartureAirportCode());
-			flightResponse.setDestinationAirportCode(object.getDestinationAirportCode());
-			flightResponse.setDepartureDate(ValueFormatter.getDateTimeISO8801(object.getDepartureDate()));
-			flightResponse.setArrivalDate(ValueFormatter.getDateTimeISO8801(object.getArrivalDate()));
-			flights.add(flightResponse);
-		}
+            flights.add(flightResponse);
+        }
 
-		return flights;
-	}
+        return flights;
+    }
+
+    private List<FlightResponse> convertCrazyAirSupplier(final List<CrazyAirFlightResponse> crazyAirFlightResponseList)
+    {
+        final List<FlightResponse> flights = new ArrayList<>();
+
+        for (final CrazyAirFlightResponse object : crazyAirFlightResponseList)
+        {
+            final FlightResponse flightResponse = new FlightResponse();
+            flightResponse.setAirline(object.getAirline());
+            flightResponse.setSupplier(Supplier.CRAZY_AIR.getName());
+            flightResponse.setFare(ValueFormatter.round(object.getPrice()));
+            flightResponse.setDepartureAirportCode(ValueFormatter.getLetterIATACode(object.getDepartureAirportCode()));
+            flightResponse.setDestinationAirportCode(ValueFormatter.getLetterIATACode(object.getDestinationAirportCode()));
+            flightResponse.setDepartureDate(ValueFormatterCrazyAir.getDateTimeISO8801(object.getDepartureDate()));
+            flightResponse.setArrivalDate(ValueFormatterCrazyAir.getDateTimeISO8801(object.getArrivalDate()));
+            flights.add(flightResponse);
+        }
+
+        return flights;
+    }
 }

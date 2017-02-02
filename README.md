@@ -7,8 +7,9 @@
 * params. So, this is not appropriate to use.
 
 TODO 
-- valid the date ISO8601 
 - valid variables that has max numbers.
 - Criar handler/algo assim para separar o tipo de protocolo usado (json)
 - Informar que para rodar os testes do projeto BusyFlights, tem que deixar o outro projeto rodando, da API
 - passar para mock request..
+
+- readme em ambos os projetos
