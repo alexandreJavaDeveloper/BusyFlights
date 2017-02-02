@@ -33,6 +33,7 @@ public class SearchSolutionService
 
     private final String URL_TOUGH_JET = "http://localhost:8090/toughjet";
 
+    // Thread-safe
     private final RestTemplate restTemplate;
 
     // Thread-safe, so can be and must be instantiated once (performance)
