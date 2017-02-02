@@ -46,11 +46,11 @@ public class SearchSolutionService
     {
         this.restTemplate = new RestTemplate();
         this.typeReferenceCrazyAir = new TypeReference<List<CrazyAirFlightResponse>>()
-            {
-            };
-        this.typeReferenceToughJet = new TypeReference<List<ToughJetFlightResponse>>()
-                {
-                };
+        {
+        };
+            this.typeReferenceToughJet = new TypeReference<List<ToughJetFlightResponse>>()
+        {
+        };
     }
 
     @SuppressWarnings("unchecked")
