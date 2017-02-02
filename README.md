@@ -8,6 +8,7 @@
 ## Why these technologies?
 - The choise to use HTTP POST is because when we need to send a body in the HTTP request, is more casual to use POST than GET. One example is the OkHttp library where you can't use HTTP GET to put a body in the body request.
 - One option would be to use GET using params, but there is some limitation of characters in the params. So, this is not appropriate to use GET with params.
+- This application connects to the CrazyAirAndToughJetAPI project via HTTP protocol, using the method POST.
 
 ## TODO 
 - Criar handler/algo assim para separar o tipo de protocolo usado (json)
