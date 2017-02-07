@@ -33,10 +33,10 @@ public class SearchSolutionService
 
     private final String URL_TOUGH_JET = "http://localhost:8090/toughjet";
 
-    // Thread-safe
+    // Thread-safe, so can be and must be instantiated once (performance)
     private final RestTemplate restTemplate;
 
-    // Thread-safe, so can be and must be instantiated once (performance)
+    // Thread-safe
     private final ObjectMapper mapper;
 
     private final TypeReference<List<CrazyAirFlightResponse>> typeReferenceCrazyAir;
@@ -47,12 +47,8 @@ public class SearchSolutionService
     {
         this.restTemplate = new RestTemplate();
         this.mapper = new ObjectMapper();
-        this.typeReferenceCrazyAir = new TypeReference<List<CrazyAirFlightResponse>>()
-        {
-        };
-            this.typeReferenceToughJet = new TypeReference<List<ToughJetFlightResponse>>()
-        {
-        };
+        this.typeReferenceCrazyAir = new TypeReference<List<CrazyAirFlightResponse>>(){};
+        this.typeReferenceToughJet = new TypeReference<List<ToughJetFlightResponse>>(){};
     }
 
     @SuppressWarnings("unchecked")
@@ -73,14 +69,13 @@ public class SearchSolutionService
         final List<ToughJetFlightResponse> toughJetFlightResponse = this.mapper.readValue(listCrazyToughJetJson, this.typeReferenceToughJet);
 
         final List<FlightResponse> flightsCrazyAir = this.convertCrazyAirSupplier(crazyAirFlightResponseList);
-        Collections.sort(flightsCrazyAir);
-
         final List<FlightResponse> flightsToughJet = this.convertToughJetSupplier(toughJetFlightResponse);
-        Collections.sort(flightsToughJet);
 
         final List<FlightResponse> flights = new ArrayList<>();
         flights.addAll(flightsCrazyAir);
         flights.addAll(flightsToughJet);
+
+        Collections.sort(flights);
 
         return flights;
     }
@@ -97,10 +92,8 @@ public class SearchSolutionService
             flightResponse.setFare(ValueFormatter.round(object.getBasePrice() + object.getTax()));
             flightResponse.setDepartureAirportCode(object.getDepartureAirportName());
             flightResponse.setDestinationAirportCode(object.getArrivalAirportName());
-            flightResponse.setDepartureDate(ValueFormatterToughJet.getDateTimeISO8801(object.getDepartureDay(), object.getDepartureMonth(),
-                object.getDepartureYear()));
+            flightResponse.setDepartureDate(ValueFormatterToughJet.getDateTimeISO8801(object.getDepartureDay(), object.getDepartureMonth(), object.getDepartureYear()));
             flightResponse.setArrivalDate(ValueFormatterToughJet.getDateTimeISO8801(object.getReturnDay(), object.getReturnMonth(), object.getReturnYear()));
-
             flights.add(flightResponse);
         }
 
